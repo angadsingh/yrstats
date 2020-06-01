@@ -1,6 +1,17 @@
 # YRStats.py
 
 A simple command line utility to easily capture and share game stats for your [Command & Conquer Red Alert: Yuri's revenge](https://en.wikipedia.org/wiki/Command_%26_Conquer:_Yuri%27s_Revenge) games.
+<!--ts-->
+* [YRStats.py](#yrstatspy)
+     * [What can YRStats.py do?](#what-can-yrstatspy-do)
+     * [Installation](#installation)
+     * [Usage](#usage)
+     * [Configuration](#configuration)
+     * [Example usage](#example-usage)
+     * [Advanced Usage](#advanced-usage)
+     * [Contributors Needed!](#contributors-needed)
+<!--te-->
+
 
 ### What can YRStats.py do?
 
