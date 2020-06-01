@@ -214,6 +214,6 @@ Or just extract stats for a single game (for testing?):
 
 ### Contributors Needed!
 I need contributors for the following:
-- figuring out building names for building codes in statparser.php
+- figuring out building names for building codes in [statparser.php](statparser.php)
 - converting statparser.php to python (someone with the knowledge of php's [unpack](https://www.php.net/manual/en/function.unpack.php) method's format specifiers)
 - making the stats HTML more sexy, beyond just json2html :)
