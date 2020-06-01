@@ -1,0 +1,5 @@
+watchdog
+json2html
+click
+pyyaml
+colorama

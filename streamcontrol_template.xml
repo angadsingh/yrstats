@@ -1,0 +1,15 @@
+<!DOCTYPE StreamControl>
+<items>
+ <timestamp>{{timestamp}}</timestamp>
+ <cTitle1>comment1</cTitle1>
+ <cTitle2>comment2</cTitle2>
+ <mText1>{{mtext1}}</mText1>
+ <mText2>{{mtext2}}</mText2>
+ <mText3>{{mtext3}}</mText3>
+ <mText4>{{mtext4}}</mText4>
+ <pName1>{{player1name}}</pName1>
+ <pName2>{{player2name}}</pName2>
+ <pScore1>{{player1wins}}</pScore1>
+ <pScore2>{{player2wins}}</pScore2>
+ <rounds>0</rounds>
+</items>

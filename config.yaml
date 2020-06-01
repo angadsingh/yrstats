@@ -1,0 +1,37 @@
+thisPlayerName: hellbender
+statsDmpFilePath: "C:\\Program Files (x86)\\Origin Games\\Command and Conquer Red Alert II\\stats.dmp"
+
+#Local directory path where you want to keep the parsed game stat data
+gameStatsFolder: ./stats/games
+
+#Local directory path where you want to keep the aggregated session stat data
+sessionStatsFolder: ./stats/sessions
+
+#Local directory path where you want to keep the aggregated overall stat data
+overallStatsFolder: ./stats/overall
+
+#Full path to the PHP executable - required to run statparser.php
+phpExecutable: "C:\\Users\\Angad Singh\\Downloads\\php-7.4.6-nts-Win32-vc15-x64\\php.exe"
+
+#path of the html_resources folder relative to the sessionStatsFolder
+htmlResourcesRelPathSessions: ../../html_resources
+
+#path of the html_resources folder relative to the sessionStatsFolder
+htmlResourcesRelPathOverall: ../html_resources
+
+htmlTemplateSessions: template_sessions.html
+htmlTemplateOverall: template_overall.html
+
+#run surge once in the stats folder to configure the host
+surgeSessionPath: http://hellbender.surge.sh/sessions/
+surgeFolder: ./stats
+
+xsplitXmlTemplate: ./streamcontrol_template.xml
+xsplitXmlTargetPath: C:\Users\Angad Singh\Desktop\StreamControl_0_3\streamcontrol.xml
+
+playerAliases: 
+  - - hellbender
+    - <human player>
+  - - jacy
+    - BKL
+    - DistanSingh
