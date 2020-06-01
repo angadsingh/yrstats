@@ -2,7 +2,7 @@
 
 A simple command line utility to easily capture and share game stats for your [Command & Conquer Red Alert: Yuri's revenge](https://en.wikipedia.org/wiki/Command_%26_Conquer:_Yuri%27s_Revenge) games.
 
-###### What can YRStats.py do?
+##### What can YRStats.py do?
 
 - Automatically extract game stats from the game's `stats.dmp` file after every game, parse them and store them in a readable `JSON` format in a timestamped fashion for archival (credits for the `stats.dmp` parsing code go to the [CNCNet Ladder project](https://github.com/CnCNet/cncnet-ladder-api))
 - Create and update `session` stats - with session game history, aggregated session stats for each player to the lowest detail - from wins and losses, teams used, maps played to how many of each kind of units were built, captured or killed.
@@ -15,7 +15,7 @@ A simple command line utility to easily capture and share game stats for your [C
   - Write and update a [streamcontrol](http://farpnut.net/streamcontrol/) compatible XML file so that you can overlay a game session scoreboard on your youtube/twitch stream using [XSplit broadcaster](https://www.xsplit.com/broadcaster) or [OBS](https://obsproject.com/)!
 - Demo videos [[1]](https://www.youtube.com/watch?v=vI2HIdtdUO4) [[2]](https://youtu.be/8v6yw01jzfU)
 
-###### Installation
+##### Installation
 
 1. Download a zip of this project
 2. Install php 7.x for [windows](https://windows.php.net/downloads/releases/php-7.4.6-nts-Win32-vc15-x64.zip)
@@ -25,7 +25,7 @@ A simple command line utility to easily capture and share game stats for your [C
 6. Configure the `config.yaml` (instructions below)
 7. Run `yrstats.py`
 
-###### Usage
+##### Usage
 
 The command line interface is pretty self explanatory:
 
@@ -108,7 +108,7 @@ Options:
   --help                          Show this message and exit.
 ```
 
-###### Configuration
+##### Configuration
 
 You need to create `config.yaml` file and provide it to `yrstats.py` to run. Here's how it looks like:
 
@@ -152,13 +152,11 @@ playerAliases:
     - DistanSingh
 ```
 
-###### Example usage
+##### Example usage
 
 Whenever you play your game (e.g. on [CNCNet](http://cncnet.org/)), just run `yrstats.py` first, and if you stream, start your broadcaster before playing, and thats it, the utility will do its job in the background:
 
-```bash
-> python yrstats.py --config config.yaml start-stat-watcher --show-youtube-summary --publish-to-surge --write-xsplit-xml --open-browser
-```
+`> python yrstats.py --config config.yaml start-stat-watcher --show-youtube-summary --publish-to-surge --write-xsplit-xml --open-browser`
 
 ![](example_usage.PNG)
 
@@ -181,33 +179,25 @@ The above is just a fake example created by copying over some old `stats.dmp` fi
 
 If you copy this to your youtube video's description, the relative timestamps will become clickable automatically. To make sure these are accurate, start `yrstats.py` at the same time as your broadcaster or recorder (a few seconds here and there should be ok anyway).
 
-Here's how the session stats HTML looks like:
+Here's how the session stats HTML looks [like](http://hellbender.surge.sh/sessions/2020-05-30%2023-50-37/1590862837_session_stats):
 
-[http://hellbender.surge.sh/sessions/2020-05-30%2023-50-37/1590862837_session_stats](http://hellbender.surge.sh/sessions/2020-05-30 23-50-37/1590862837_session_stats)
+![](example_usage3.PNG)
 
-![](C:\Users\Angad Singh\Desktop\yrstats\example_usage3.PNG)
-
-![](C:\Users\Angad Singh\Desktop\yrstats\example_usage4.PNG)
+![](example_usage4.PNG)
 
 If you mess up your overall stats, you can always recreate them:
 
-```bash
-> python yrstats.py --config config.yaml update-overall-stats --since-time "2020-05-30 00:00:00"
+`> python yrstats.py --config config.yaml update-overall-stats --since-time "2020-05-30 00:00:00"`
 
 OR
 
-> python yrstats.py --config config.yaml update-overall-stats --since-last-n-days 10
-```
+`> python yrstats.py --config config.yaml update-overall-stats --since-last-n-days 10`
 
 You can even manually create a session:
 
-```bash
-> python yrstats.py --config config.yaml update-session-stats --since-time "2020-05-30 00:18:56" --show-youtube-summary
-```
+`> python yrstats.py --config config.yaml update-session-stats --since-time "2020-05-30 00:18:56" --show-youtube-summary`
 
 Or just extract stats for a single game (for testing?):
 
-```bash
-> python yrstats.py --config config.yaml extract-game-stats --stat-dmp-file "C:\Program Files (x86)\Origin Games\Command and Conquer Red Alert II\stats.dmp"
-```
+`> python yrstats.py --config config.yaml extract-game-stats --stat-dmp-file "C:\Program Files (x86)\Origin Games\Command and Conquer Red Alert II\stats.dmp"`
 
