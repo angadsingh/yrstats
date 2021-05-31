@@ -128,7 +128,6 @@ class BlockHeader:
         """
         Parse a block data from bytes.
         """
-        # pylint: disable=too-many-return-statements
         if len(binary_blob) != self._length:
             raise ValueError(
                 f"Block data should have length {self._length}, "
@@ -325,7 +324,7 @@ def process_stats(stats_file: str, output_folder: str, reporter_name: str) -> st
     game_result = "unknown"
     for player_stats in players_stats:
         if player_stats["name"] == reporter_name:
-            for code, status in mappings.COMPLETION_CODES.items():
+            for status in mappings.COMPLETION_CODES.values():
                 if player_stats[status] is True:
                     game_result = status
                     break

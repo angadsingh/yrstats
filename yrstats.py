@@ -1,46 +1,28 @@
-import os
-from datetime import datetime, date, timedelta
-import json
-import watchdog.events
-import watchdog.observers
-import sys
-import time
-from json2html import *
-import string,cgi,time
-from http.server import HTTPServer, CGIHTTPRequestHandler
-import webbrowser
-import threading
 import copy
 import functools
-import click
-import yaml
-import subprocess
 import glob
-import shutil
+import json
 import ntpath
-import colorama
+import os
+import subprocess
+import sys
+import threading
+import time
 import urllib
+import webbrowser
+from datetime import datetime, date, timedelta
+from http.server import HTTPServer, CGIHTTPRequestHandler
 
+import click
+import watchdog.events
+import watchdog.observers
+import yaml
+import colorama
+import json2html
+
+import mappings
 import statparser
 
-
-COUNTABLE_HEAPS = [ "units_bought",
-     "infantry_bought",
-     "planes_bought",
-     "ships_built",
-     "buildings_bought",
-     "units_killed",
-     "infantry_killed",
-     "planes_killed",
-     "ships_killed",
-     "buildings_killed",
-     "buildings_captured",
-     "units_lost",
-     "infantry_lost",
-     "planes_lost",
-     "buildings_lost",
-     "ships_lost",
-     "crates_found" ]
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S%z"
 
@@ -51,7 +33,7 @@ def print_special(text):
     print(colorama.Fore.GREEN + text)
 
 def print_special2(text):
-    print(colorama.Fore.BLUE + text)    
+    print(colorama.Fore.BLUE + text)
 
 def print_error(text):
     print(colorama.Fore.RED + text)
@@ -285,7 +267,8 @@ def aggregate_game_player_stats(config, aggregated_stats, data):
                     }
                 }
 
-        for heap in COUNTABLE_HEAPS:
+        # for heap in COUNTABLE_HEAPS:
+        for heap in mappings.HUMAN_READABLE_COUNTABLES.values():
             aggregated_stats['player_stats'][name]['detailed_counts'][heap] = {}
 
         aggregated_stats['player_stats'][name]['games_played'] += 1
@@ -303,7 +286,8 @@ def aggregate_game_player_stats(config, aggregated_stats, data):
 
         aggregated_stats['player_stats'][name]['sides'][stats['side']] += 1
 
-        for heap in COUNTABLE_HEAPS:
+        # for heap in COUNTABLE_HEAPS:
+        for heap in mappings.HUMAN_READABLE_COUNTABLES.values():
             if heap in stats:
                 if heap not in aggregated_stats['player_stats'][name]:
                     aggregated_stats['player_stats'][name][heap] = 0
