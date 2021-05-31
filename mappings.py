@@ -2,7 +2,7 @@
 This module provides mappings for parsing and prettifying `"stats.dmp"` file.
 """
 
-from typing import Dict, List
+from typing import Dict, List, Set
 
 
 SIDES: Dict[int, str] = {
@@ -46,6 +46,8 @@ HUMAN_READABLE_COUNTABLES: Dict[str, str] = {
     "BLC": "buildings_captured",
     "CRA": "crates_found",
 }
+
+COUNTABLE_METRICS: Set[str] = {x.split("_")[-1] for x in HUMAN_READABLE_COUNTABLES.values()}
 
 COUNTABLE_TYPES: Dict[str, List[str]] = {
     "CR": [

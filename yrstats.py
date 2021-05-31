@@ -21,6 +21,9 @@ import ntpath
 import colorama
 import urllib
 
+import statparser
+
+
 COUNTABLE_HEAPS = [ "units_bought",
      "infantry_bought",
      "planes_bought",
@@ -160,7 +163,11 @@ class StatsDmpWatcher(watchdog.events.PatternMatchingEventHandler):
 
         self.last_notification_time = time_now
 
-        gamestats = call_stat_dmp_parser(self.config, stat_dmp_file_path = event.src_path)
+        gamestats = statparser.process_stats(
+            event.src_path,
+            self.config["gameStatsFolder"],
+            self.config["thisPlayerName"],
+        )
        
         if gamestats not in self.processed_files:
             print_special("Aggregating SESSION stats from parsed game stats: " + gamestats)
@@ -551,7 +558,7 @@ def start_stat_watcher(ctx, stat_dmp_file, start_web_server, open_browser, show_
 @click.pass_context
 def extract_game_stats(ctx, stat_dmp_file):
     config = ctx.obj['CONFIG']
-    call_stat_dmp_parser(config, stat_dmp_file_path = stat_dmp_file)
+    statparser.process_stats(stat_dmp_file, config["gameStatsFolder"], config['thisPlayerName'])
 
 def base_update_stats_params(func):
     @click.option('--since-today', is_flag=True)

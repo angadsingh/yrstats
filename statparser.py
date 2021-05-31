@@ -3,16 +3,22 @@ This module provides functions for parsing and prettifying `"stats.dmp"` file.
 """
 
 import base64
-import os.path
+import json
+import os
 import re
-from collections import defaultdict
+import shutil
+from datetime import datetime
 from struct import unpack
-from typing import DefaultDict, Dict, Union
+from typing import Dict, List, Union
 
 import mappings
 
 
-_DecodedBlockType = Union[bytes, bool, int, str, Dict[str, int]]
+PLAYER_SUFFIXES = "01234567"
+
+
+_DecodedBlockType = Union[bool, int, str, Dict[str, int]]
+_PrettifiedStatsType = Dict[str, Union[_DecodedBlockType, Dict[str, _DecodedBlockType]]]
 
 
 def bytes_to_ascii(binary_blob: bytes) -> str:
@@ -27,6 +33,18 @@ def bytes_to_ascii(binary_blob: bytes) -> str:
     """
     binary_blob = re.sub(rb"[^\x20-\x7E]", b"?", binary_blob)
     return binary_blob.decode("ascii")
+
+
+def write_dict_to_json(data: Dict, output_file: str) -> None:
+    """
+    Save a dict as file in human readable JSON format.
+
+    Args:
+        data: Dict to save.
+        output_file: Output file.
+    """
+    with open(output_file, "w") as file:
+        json.dump(data, file, indent=4, sort_keys=True)
 
 
 class BlockHeader:
@@ -168,10 +186,6 @@ def parse_stats(filepath: str) -> Dict[str, _DecodedBlockType]:
     Returns:
         Parsed statistics.
     """
-    if not os.path.isfile(filepath):
-        raise FileNotFoundError(
-            f'Given path "{filepath}" does not exist or is not a file.'
-        )
     stats: Dict[str, _DecodedBlockType] = {}
     with open(filepath, "rb") as file:
         # Read file header.
@@ -195,93 +209,143 @@ def parse_stats(filepath: str) -> Dict[str, _DecodedBlockType]:
     return stats
 
 
-def prettify_stats(
-    raw_stats: Dict[str, _DecodedBlockType], save_raw: bool
-) -> Dict[str, Dict[str, _DecodedBlockType]]:
+def prettify_player_stats(
+    raw_stats: Dict[str, _DecodedBlockType]
+) -> _PrettifiedStatsType:
     """
-    Prettify the parsed statistics from a `"stats.dmp"` file.
-
-    Args:
-        raw_stats: Parsed statistics (output of `parse_stats` function).
-        save_raw: Whether to save not prettified values too.
-
-    Returns:
-        Prettified statistics.
+    Prettify stats of a player. Only tags (keys of `raw_stats`) of one player
+    without specific suffix expected.
     """
-    stats: DefaultDict[str, Dict[str, _DecodedBlockType]] = defaultdict(dict)
+    stats: _PrettifiedStatsType = {}
+    detailed_counts: Dict[str, int] = {}
+    raw: Dict[str, _DecodedBlockType] = {}
     for tag, value in raw_stats.items():
-        if tag[-1] in "01234567":
-            # Player-specific data.
-            key = raw_stats["NAM" + tag[-1]]
-            tag = tag[:-1]
-        else:
-            # Common game data.
-            key = "game"
-        # Prettify data.
-        # Player-specific tags.
         if tag == "CMP":
             for code, status in mappings.COMPLETION_CODES.items():
-                stats[key][status] = bool(value & code)
+                stats[status] = bool(value & code)
         elif tag == "RSG":
-            stats[key]["quit"] = value
+            stats["quit"] = value
         elif tag == "DED":
-            stats[key]["defeated"] = value
+            stats["defeated"] = value
         elif tag == "SPC":
-            stats[key]["spectator"] = value
+            stats["spectator"] = value
         elif tag in ("LCN", "CON"):
-            stats[key]["disconnected"] = value
+            stats["disconnected"] = value
         elif tag == "CTY":
-            stats[key]["side"] = mappings.SIDES[value]
+            stats["side"] = mappings.SIDES[value]
         elif tag == "NAM":
-            stats[key]["name"] = value
+            stats["name"] = value
         elif tag == "CRD":
-            stats[key]["credits_left"] = value
-        # Common tags.
-        elif tag == "DURA":
-            stats[key]["duration"] = value
-        elif tag == "AFPS":
-            stats[key]["fps"] = value
-        elif tag == "FINI":
-            stats[key]["finished"] = value
-        elif tag == "TIME":
-            stats[key]["timestamp"] = value
-        elif tag == "SCEN":
-            stats[key]["map"] = value
-        elif tag == "UNIT":
-            stats[key]["starting_units"] = value
-        elif tag == "CRED":
-            stats[key]["starting_credits"] = value
-        elif tag == "SUPR":
-            stats[key]["superweapons"] = bool(value)
-        elif tag == "CRAT":
-            stats[key]["crates"] = bool(value)
-        elif tag == "PLRS":
-            stats[key]["human_players"] = value
-        elif tag == "BAMR":
-            stats[key]["mcv_repacks"] = bool(value & 1)
-            stats[key]["build_off_ally_conyards"] = bool(value & 2)
-        elif tag == "SHRT":
-            stats[key]["short_game"] = bool(value)
-        elif tag == "AIPL":
-            stats[key]["ai_players"] = value
-        elif tag == "VERS":
-            stats[key]["game_version"] = value
+            stats["funds_left"] = value
         elif tag in mappings.HUMAN_READABLE_COUNTABLES:
             human_readable_tag = mappings.HUMAN_READABLE_COUNTABLES[tag]
-            stats[key][f"total_{human_readable_tag}"] = sum(value.values(), 0)
-            stats[key][human_readable_tag] = value
-        elif save_raw:
-            stats[f"{key}_raw"][tag] = value
-    for key, value in stats.items():
-        if key.startswith("game") or key.endswith("raw"):
-            continue
-        for suffix in ("built", "killed", "left", "captured", "found"):
-            stats[key][f"total_{suffix}"] = sum(
-                (
-                    value
-                    for key, value in value.items()
-                    if key.startswith("total") and key.endswith(suffix)
-                ),
-                0,
-            )
+            stats[human_readable_tag] = sum(value.values(), 0)
+            detailed_counts[human_readable_tag] = value
+        else:
+            raw[tag] = value
+    stats["raw"] = raw
+    stats["detailed_counts"] = detailed_counts
     return stats
+
+
+def prettify_game_stats(
+    raw_stats: Dict[str, _DecodedBlockType]
+) -> _PrettifiedStatsType:
+    """
+    Prettify stats of a game. Only non-player specific tags (keys of
+    `raw_stats`) expected.
+    """
+    stats: _PrettifiedStatsType = {}
+    raw: Dict[str, _DecodedBlockType] = {}
+    for tag, value in raw_stats.items():
+        if tag == "DURA":
+            stats["duration"] = value
+        elif tag == "AFPS":
+            stats["fps"] = value
+        elif tag == "FINI":
+            stats["finished"] = value
+        elif tag == "TIME":
+            stats["epoch_time"] = value
+        elif tag == "SCEN":
+            stats["map"] = value
+        elif tag == "UNIT":
+            stats["starting_units"] = value
+        elif tag == "CRED":
+            stats["starting_credits"] = value
+        elif tag == "SUPR":
+            stats["superweapons"] = bool(value)
+        elif tag == "CRAT":
+            stats["crates"] = bool(value)
+        elif tag == "PLRS":
+            stats["players_in_game"] = value
+        elif tag == "BAMR":
+            stats["mcv_repacks"] = bool(value & 1)
+            stats["build_off_ally_conyards"] = bool(value & 2)
+        elif tag == "SHRT":
+            stats["short_game"] = bool(value)
+        elif tag == "AIPL":
+            stats["ai_players"] = value
+        elif tag == "VERS":
+            stats["game_version"] = value
+        else:
+            raw[tag] = value
+    stats["raw"] = raw
+    return stats
+
+
+def process_stats(stats_file: str, output_folder: str, reporter_name: str) -> str:
+    """
+    Backup, parse and prettify a `"stats.dmp"` file.
+
+    Args:
+        stats_file: `"stats.dmp"` file.
+        output_folder: Backup folder.
+        reporter_name: Name of the current player to parse the game status from.
+
+    Returns:
+        Path to the prettified stats in JSON format.
+    """
+    if not os.path.isfile(stats_file):
+        raise FileNotFoundError(
+            f'Given path "{stats_file}" does not exist or is not a file.'
+        )
+
+    raw_stats = parse_stats(stats_file)
+    players_stats = []
+    for suffix in PLAYER_SUFFIXES:
+        player_raw_stats = {
+            tag[:-1]: value for tag, value in raw_stats.items() if tag.endswith(suffix)
+        }
+        if player_raw_stats:
+            players_stats.append(prettify_player_stats(player_raw_stats))
+    game_raw_stats = {
+        tag: value for tag, value in raw_stats.items() if tag[-1] not in PLAYER_SUFFIXES
+    }
+    game_stats = prettify_game_stats(game_raw_stats)
+    game_result = "unknown"
+    for player_stats in players_stats:
+        if player_stats["name"] == reporter_name:
+            for code, status in mappings.COMPLETION_CODES.items():
+                if player_stats[status] is True:
+                    game_result = status
+                    break
+
+    stats: Dict[str, Union[str, _PrettifiedStatsType, List[_PrettifiedStatsType]]] = {
+        "gameReport": game_stats,
+        "playerStats": players_stats,
+        "gameResult": game_result,
+    }
+
+    timestamp = game_stats["epoch_time"]
+    output_folder = os.path.join(
+        output_folder,
+        datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H-%M-%S"),
+    )
+    os.makedirs(output_folder, exist_ok=True)
+    shutil.copy(stats_file, os.path.join(output_folder, f"{timestamp}_stats.dmp"))
+    write_dict_to_json(
+        raw_stats, os.path.join(output_folder, f"{timestamp}_stats_raw.json")
+    )
+    stats_json_file = os.path.join(output_folder, f"{timestamp}_stats_parsed.json")
+    write_dict_to_json(stats, stats_json_file)
+    return stats_json_file
