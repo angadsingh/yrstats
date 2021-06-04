@@ -18,7 +18,7 @@ import watchdog.events
 import watchdog.observers
 import yaml
 import colorama
-import json2html
+from json2html import json2html
 
 import mappings
 import statparser
