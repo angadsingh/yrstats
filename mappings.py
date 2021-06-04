@@ -47,7 +47,9 @@ HUMAN_READABLE_COUNTABLES: Dict[str, str] = {
     "CRA": "crates_found",
 }
 
-COUNTABLE_METRICS: Set[str] = {x.split("_")[-1] for x in HUMAN_READABLE_COUNTABLES.values()}
+COUNTABLE_METRICS: Set[str] = {
+    x.split("_")[-1] for x in HUMAN_READABLE_COUNTABLES.values()
+}
 
 COUNTABLE_TYPES: Dict[str, List[str]] = {
     "CR": [
