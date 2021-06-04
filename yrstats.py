@@ -1,43 +1,28 @@
-import os
-from datetime import datetime, date, timedelta
-import json
-import watchdog.events
-import watchdog.observers
-import sys
-import time
-from json2html import *
-import string,cgi,time
-from http.server import HTTPServer, CGIHTTPRequestHandler
-import webbrowser
-import threading
 import copy
 import functools
-import click
-import yaml
-import subprocess
 import glob
-import shutil
+import json
 import ntpath
-import colorama
+import os
+import subprocess
+import sys
+import threading
+import time
 import urllib
+import webbrowser
+from datetime import datetime, date, timedelta
+from http.server import HTTPServer, CGIHTTPRequestHandler
 
-COUNTABLE_HEAPS = [ "units_bought",
-     "infantry_bought",
-     "planes_bought",
-     "ships_built",
-     "buildings_bought",
-     "units_killed",
-     "infantry_killed",
-     "planes_killed",
-     "ships_killed",
-     "buildings_killed",
-     "buildings_captured",
-     "units_lost",
-     "infantry_lost",
-     "planes_lost",
-     "buildings_lost",
-     "ships_lost",
-     "crates_found" ]
+import click
+import watchdog.events
+import watchdog.observers
+import yaml
+import colorama
+from json2html import json2html
+
+import mappings
+import statparser
+
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S%z"
 
@@ -48,7 +33,7 @@ def print_special(text):
     print(colorama.Fore.GREEN + text)
 
 def print_special2(text):
-    print(colorama.Fore.BLUE + text)    
+    print(colorama.Fore.BLUE + text)
 
 def print_error(text):
     print(colorama.Fore.RED + text)
@@ -160,7 +145,11 @@ class StatsDmpWatcher(watchdog.events.PatternMatchingEventHandler):
 
         self.last_notification_time = time_now
 
-        gamestats = call_stat_dmp_parser(self.config, stat_dmp_file_path = event.src_path)
+        gamestats = statparser.process_stats(
+            event.src_path,
+            self.config["gameStatsFolder"],
+            self.config["thisPlayerName"],
+        )
        
         if gamestats not in self.processed_files:
             print_special("Aggregating SESSION stats from parsed game stats: " + gamestats)
@@ -278,7 +267,8 @@ def aggregate_game_player_stats(config, aggregated_stats, data):
                     }
                 }
 
-        for heap in COUNTABLE_HEAPS:
+        # for heap in COUNTABLE_HEAPS:
+        for heap in mappings.HUMAN_READABLE_COUNTABLES.values():
             aggregated_stats['player_stats'][name]['detailed_counts'][heap] = {}
 
         aggregated_stats['player_stats'][name]['games_played'] += 1
@@ -296,7 +286,8 @@ def aggregate_game_player_stats(config, aggregated_stats, data):
 
         aggregated_stats['player_stats'][name]['sides'][stats['side']] += 1
 
-        for heap in COUNTABLE_HEAPS:
+        # for heap in COUNTABLE_HEAPS:
+        for heap in mappings.HUMAN_READABLE_COUNTABLES.values():
             if heap in stats:
                 if heap not in aggregated_stats['player_stats'][name]:
                     aggregated_stats['player_stats'][name][heap] = 0
@@ -551,7 +542,7 @@ def start_stat_watcher(ctx, stat_dmp_file, start_web_server, open_browser, show_
 @click.pass_context
 def extract_game_stats(ctx, stat_dmp_file):
     config = ctx.obj['CONFIG']
-    call_stat_dmp_parser(config, stat_dmp_file_path = stat_dmp_file)
+    statparser.process_stats(stat_dmp_file, config["gameStatsFolder"], config['thisPlayerName'])
 
 def base_update_stats_params(func):
     @click.option('--since-today', is_flag=True)
