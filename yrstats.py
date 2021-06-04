@@ -267,7 +267,6 @@ def aggregate_game_player_stats(config, aggregated_stats, data):
                     }
                 }
 
-        # for heap in COUNTABLE_HEAPS:
         for heap in mappings.HUMAN_READABLE_COUNTABLES.values():
             aggregated_stats['player_stats'][name]['detailed_counts'][heap] = {}
 
@@ -286,7 +285,6 @@ def aggregate_game_player_stats(config, aggregated_stats, data):
 
         aggregated_stats['player_stats'][name]['sides'][stats['side']] += 1
 
-        # for heap in COUNTABLE_HEAPS:
         for heap in mappings.HUMAN_READABLE_COUNTABLES.values():
             if heap in stats:
                 if heap not in aggregated_stats['player_stats'][name]:
