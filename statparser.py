@@ -7,6 +7,7 @@ import json
 import os
 import re
 import shutil
+from dataclasses import dataclass
 from datetime import datetime
 from struct import unpack
 from typing import Dict, List, Union
@@ -47,67 +48,23 @@ def write_dict_to_json(data: Dict, output_file: str) -> None:
         json.dump(data, file, indent=4, sort_keys=True)
 
 
+@dataclass(frozen=True)
 class BlockHeader:
     """
     Class for storing block header and decoding block data.
     """
 
-    _tag: str
-    _type: int
-    _length: int
-
-    def __init__(self, tag: str, type_: int, length: int) -> None:
-        if not isinstance(tag, str):
-            raise TypeError(
-                f"`tag` argument should be a string, "
-                f"but value {tag} of type {type(tag)} received."
-            )
-        self._tag = tag
-        if not isinstance(type_, int):
-            raise TypeError(
-                f"`type_` argument should be an integer, "
-                f"but value {type_} of type {type(type_)} received."
-            )
-        self._type = type_
-        if not isinstance(length, int):
-            raise TypeError(
-                f"`length` argument should be an integer, "
-                f"but value {length} of type {type(length)} received."
-            )
-        if length < 0:
-            raise ValueError(
-                f"`length` argument should be non-negative, but {length} received."
-            )
-        self._length = length
-
-    @property
-    def tag(self) -> str:
-        """
-        Block tag.
-        """
-        return self._tag
-
-    @property
-    def type(self) -> int:
-        """
-        Block type.
-        """
-        return self._type
-
-    @property
-    def length(self) -> int:
-        """
-        Block data length.
-        """
-        return self._length
+    tag: str
+    type: int
+    length: int
 
     @property
     def padding(self) -> int:
         """
         Block data padding.
         """
-        if self._length % 4:
-            return 4 - self._length % 4
+        if self.length % 4:
+            return 4 - self.length % 4
         return 0
 
     @classmethod
@@ -128,51 +85,51 @@ class BlockHeader:
         """
         Parse a block data from bytes.
         """
-        if len(binary_blob) != self._length:
+        if len(binary_blob) != self.length:
             raise ValueError(
-                f"Block data should have length {self._length}, "
+                f"Block data should have length {self.length}, "
                 f"but binary blob of length {len(binary_blob)} received."
             )
-        if self._type == 1:
+        if self.type == 1:
             # A single byte.
             return unpack(">c", binary_blob)[0]
-        if self._type == 2:
+        if self.type == 2:
             # A single boolean.
             return unpack(">?", binary_blob)[0]
-        if self._type == 3:
+        if self.type == 3:
             # A single short.
             return unpack(">h", binary_blob)[0]
-        if self._type == 4:
+        if self.type == 4:
             # A single unsigned short.
             return unpack(">H", binary_blob)[0]
-        if self._type == 5:
+        if self.type == 5:
             # A single long.
             return unpack(">l", binary_blob)[0]
-        if self._type == 6:
+        if self.type == 6:
             # A single unsigned long.
             return unpack(">L", binary_blob)[0]
-        if self._type == 7:
+        if self.type == 7:
             # Multiple b"\x00"-terminated chars.
             return bytes_to_ascii(binary_blob.rstrip(b"\x00"))
-        if self._type == 20:
+        if self.type == 20:
             # Custom type and length.
-            if self._tag[:3] in mappings.HUMAN_READABLE_COUNTABLES:
+            if self.tag[:3] in mappings.HUMAN_READABLE_COUNTABLES:
                 # Multiple unsigned longs.
-                if self._length % 4:
+                if self.length % 4:
                     raise ValueError(
                         f"Length of block data should be multiple of 4, "
-                        f"but {self._length} received."
+                        f"but {self.length} received."
                     )
-                counts = unpack(f">{int(self._length / 4)}L", binary_blob)
+                counts = unpack(f">{self.length // 4}L", binary_blob)
                 return {
-                    mappings.COUNTABLE_TYPES[self._tag[:2]][i]: count
+                    mappings.COUNTABLE_TYPES[self.tag[:2]][i]: count
                     for i, count in enumerate(counts)
                     if count > 0
                 }
             # Raw bytes.
             # Bytes are not json serializable, so encode them as base64.
             return base64.b64encode(binary_blob).decode("ascii")
-        raise ValueError(f"Decoding rule for type {self._type} is unknown.")
+        raise ValueError(f"Decoding rule for type {self.type} is unknown.")
 
 
 def parse_stats(filepath: str) -> Dict[str, _DecodedBlockType]:
