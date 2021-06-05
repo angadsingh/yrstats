@@ -1,43 +1,28 @@
-import os
-from datetime import datetime, date, timedelta
-import json
-import watchdog.events
-import watchdog.observers
-import sys
-import time
-from json2html import *
-import string,cgi,time
-from http.server import HTTPServer, CGIHTTPRequestHandler
-import webbrowser
-import threading
 import copy
 import functools
-import click
-import yaml
-import subprocess
 import glob
-import shutil
+import json
 import ntpath
-import colorama
+import os
+import subprocess
+import sys
+import threading
+import time
 import urllib
+import webbrowser
+from datetime import datetime, date, timedelta
+from http.server import HTTPServer, CGIHTTPRequestHandler
 
-COUNTABLE_HEAPS = [ "units_bought",
-     "infantry_bought",
-     "planes_bought",
-     "ships_built",
-     "buildings_bought",
-     "units_killed",
-     "infantry_killed",
-     "planes_killed",
-     "ships_killed",
-     "buildings_killed",
-     "buildings_captured",
-     "units_lost",
-     "infantry_lost",
-     "planes_lost",
-     "buildings_lost",
-     "ships_lost",
-     "crates_found" ]
+import click
+import watchdog.events
+import watchdog.observers
+import yaml
+import colorama
+from json2html import json2html
+
+import mappings
+import statparser
+
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S%z"
 
@@ -48,7 +33,7 @@ def print_special(text):
     print(colorama.Fore.GREEN + text)
 
 def print_special2(text):
-    print(colorama.Fore.BLUE + text)    
+    print(colorama.Fore.BLUE + text)
 
 def print_error(text):
     print(colorama.Fore.RED + text)
@@ -129,7 +114,7 @@ def write_xsplit_xml(config, session_stats):
             outfile.write(xsplitXmlTemplate)
 
 class StatsDmpWatcher(watchdog.events.PatternMatchingEventHandler):
-    def __init__(self, ctx_obj, dmp_file, start_time):
+    def __init__(self, ctx_obj, dmp_file, start_time, use_php_parser=False):
         self.ctx_obj = ctx_obj
         self.config = ctx_obj['CONFIG']
         self.start_time = start_time
@@ -137,8 +122,8 @@ class StatsDmpWatcher(watchdog.events.PatternMatchingEventHandler):
         self.session_stats = {}
         self.overall_stats = self.load_overall_stats()
         self.last_notification_time = None
+        self.use_php_parser = use_php_parser
 
-        gameStatsFolder = self.config['gameStatsFolder']
         watchdog.events.PatternMatchingEventHandler.__init__(self, patterns=['*'+dmp_file+'*'])
 
     def load_overall_stats(self):
@@ -160,7 +145,14 @@ class StatsDmpWatcher(watchdog.events.PatternMatchingEventHandler):
 
         self.last_notification_time = time_now
 
-        gamestats = call_stat_dmp_parser(self.config, stat_dmp_file_path = event.src_path)
+        if self.use_php_parser:
+            gamestats = call_stat_dmp_parser(self.config, event.src_path)
+        else:
+            gamestats = statparser.process_stats(
+                event.src_path,
+                self.config["gameStatsFolder"],
+                self.config["thisPlayerName"],
+            )
        
         if gamestats not in self.processed_files:
             print_special("Aggregating SESSION stats from parsed game stats: " + gamestats)
@@ -278,7 +270,7 @@ def aggregate_game_player_stats(config, aggregated_stats, data):
                     }
                 }
 
-        for heap in COUNTABLE_HEAPS:
+        for heap in mappings.HUMAN_READABLE_COUNTABLES.values():
             aggregated_stats['player_stats'][name]['detailed_counts'][heap] = {}
 
         aggregated_stats['player_stats'][name]['games_played'] += 1
@@ -296,7 +288,7 @@ def aggregate_game_player_stats(config, aggregated_stats, data):
 
         aggregated_stats['player_stats'][name]['sides'][stats['side']] += 1
 
-        for heap in COUNTABLE_HEAPS:
+        for heap in mappings.HUMAN_READABLE_COUNTABLES.values():
             if heap in stats:
                 if heap not in aggregated_stats['player_stats'][name]:
                     aggregated_stats['player_stats'][name][heap] = 0
@@ -499,6 +491,7 @@ def yrstats(ctx, config):
 def extract_game_stats_params(func):
     @click.option('--stat-dmp-file', required=False, type=click.Path(exists=True), default='C:\\Program Files (x86)\\Origin Games\\Command and Conquer Red Alert II\\stats.dmp',
         help='Full path to RA2 Yuri\'s Revenge stat.dump file, e.g. C:\\Program Files (x86)\\Origin Games\\Command and Conquer Red Alert II\\stats.dmp')
+    @click.option("--use-php-parser/--no-use-php-parser", default=False)
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         return func(*args, **kwargs)
@@ -512,7 +505,7 @@ def extract_game_stats_params(func):
 @click.option('--publish-to-surge', is_flag=True)
 @click.option('--write-xsplit-xml', is_flag=True)
 @click.pass_context
-def start_stat_watcher(ctx, stat_dmp_file, start_web_server, open_browser, show_youtube_summary, publish_to_surge, write_xsplit_xml):
+def start_stat_watcher(ctx, stat_dmp_file, use_php_parser, start_web_server, open_browser, show_youtube_summary, publish_to_surge, write_xsplit_xml):
     start_time = datetime.now()
     ctx.obj['num_games'] = 0
     dmp_file = stat_dmp_file if stat_dmp_file != None else config['statsDmpFilePath']
@@ -521,7 +514,7 @@ def start_stat_watcher(ctx, stat_dmp_file, start_web_server, open_browser, show_
     if write_xsplit_xml:
         reset_xsplit_xml(ctx.obj['CONFIG'])
 
-    event_handler = StatsDmpWatcher(ctx.obj, ntpath.basename(dmp_file), start_time)
+    event_handler = StatsDmpWatcher(ctx.obj, ntpath.basename(dmp_file), start_time, use_php_parser)
 
     dmp_file_base_dir = os.path.dirname(os.path.abspath(dmp_file))
     observer = watchdog.observers.Observer()
@@ -549,9 +542,16 @@ def start_stat_watcher(ctx, stat_dmp_file, start_web_server, open_browser, show_
 @yrstats.command(short_help="Extract game stats for the last game from stats.dmp, save it in game stats folder and exit")
 @extract_game_stats_params
 @click.pass_context
-def extract_game_stats(ctx, stat_dmp_file):
+def extract_game_stats(ctx, stat_dmp_file, use_php_parser):
     config = ctx.obj['CONFIG']
-    call_stat_dmp_parser(config, stat_dmp_file_path = stat_dmp_file)
+    if use_php_parser:
+        call_stat_dmp_parser(config, stat_dmp_file)
+    else:
+        statparser.process_stats(
+            stat_dmp_file,
+            config["gameStatsFolder"],
+            config['thisPlayerName'],
+        )
 
 def base_update_stats_params(func):
     @click.option('--since-today', is_flag=True)

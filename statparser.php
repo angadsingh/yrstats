@@ -32,11 +32,11 @@ $CountableHeaps = [
         "VSK" => "Ships Killed",
         "BLK" => "Buildings Killed",
         "BLC" => "Buildings Captured",
-        "UNL" => "Units Lost",
-        "INL" => "Infantry Lost",
-        "PLL" => "Planes Lost",
-        "BLL" => "Buildings Lost",
-        "VSL" => "Ships Lost",
+        "UNL" => "Units Left",
+        "INL" => "Infantry Left",
+        "PLL" => "Planes Left",
+        "BLL" => "Buildings Left",
+        "VSL" => "Ships Left",
         "CRA" => "Crates Found"
     ];
 

@@ -1,5 +1,8 @@
 # my game stats
-stats/*
+stats/
+.idea
+php*/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
